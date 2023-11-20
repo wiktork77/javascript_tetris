@@ -1,0 +1,55 @@
+body {
+    min-height: 100vh;
+    margin: 0;
+    position: relative;
+}
+
+#wrapper {
+    position: absolute;
+    display: block;
+    left: auto;
+    left: 50%;
+    top: 5%;
+}
+#game {
+    position: relative;
+    left: -50%;
+}
+
+.gameBlock {
+    width: 30px;
+    height: 30px;
+    border: 1px solid black;
+    float: left;
+}
+.gameBlock:nth-child(10n + 1) {
+    clear: left;
+}
+
+@media screen and (max-height: 680px) {
+    .gameBlock {
+        width: 27px;
+        height: 27px;
+    }
+}
+
+@media screen and (max-height: 620px) {
+    .gameBlock {
+        width: 25px;
+        height: 25px;
+    }
+}
+
+@media screen and (max-height: 565px) {
+    .gameBlock {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+@media screen and (max-height: 520px) {
+    .gameBlock {
+        width: 19px;
+        height: 19px;
+    }
+}
