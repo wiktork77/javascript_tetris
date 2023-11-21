@@ -12,46 +12,22 @@ document.onkeydown = (e) => {
         currentPiece.moveLeft();
     } else if (e.keyCode === 40) {
         currentPiece.moveDown();
+    }
+    else if (e.keyCode === 27) {
+        clearInterval(currentPieceInterval);
     }    
 }
 
 function displaySimpleGameBoard() {
-    let gb = []
-    for (let i = 0; i < 20; i++) {
-        gb.push([]);
-    }
+    let displayString = ""
     for (let i = 0; i < 20; i ++) {
         for (let j = 0; j < 10; j ++) {
-            gb[i][j] = gameBoard[i][j][0]
-        } 
-    }
-    console.log(gb);
-}
-
-
-
-// most left, most top
-function getAllPositionCoordinates(leftX, topY, matrix) {
-    return {
-        leftX: leftX,
-        rightX: getRightX(leftX, matrix),
-        topY: topY,
-        bottomY: topY + 1 - matrix.length
-    }
-}
-
-function getRightX(leftX, matrix) {
-    let mostRight = 0;
-    for (let i = 0; i < matrix.length; i++) {
-        for (let j = 0; j < matrix[i].length; j++) {
-            if (matrix[i][j] == 1 && j > mostRight) {
-                mostRight = j;
-            }
+            displayString  += gameBoard[i][j][0]
         }
+        displayString += "\n"; 
     }
-    return leftX + mostRight;
+    console.log(displayString);
 }
-
 
 
 class Piece {
@@ -66,6 +42,13 @@ class Piece {
         return this.color
     }
 }
+
+
+// const pieceStates = {
+//     placed: -1,
+//     empty: 0,
+//     active: 1
+// }
 
 const gamePieces = {
     lBlock: new Piece([[1, 1, 1, 1]], "aqua"),
@@ -83,118 +66,123 @@ const gamePieces = {
                        [0, 1, 1],], "red")
 }
 const pieces = Object.values(gamePieces);
+function getRandomPiece() {
+    return pieces[Math.floor(Math.random() * pieces.length)];
+}
+
 
 class GamePiece {
     constructor(piece) {
         this.matrix = piece.definition;
         this.color = piece.color;
-        this.leftX = 1;
-        this.topY = 20;
+        this.leftX = 0;
+        this.topY = 0;
         this.lastPosition = null;
     }
 
     get piece() {
         return this.piece;
     }
-
-    spawn() {
-        let wide = this.matrix[0].length
-        this.leftX = 6 - Math.ceil(wide/2)
-        this.updatePosition()
+    get height() {
+        return this.matrix.length;
+    }
+    get width() {
+        return this.matrix[0].length;
     }
 
-    updatePosition() {
-        let startIndexRow = 20 - this.topY;
-        let endIndexRow = startIndexRow + this.matrix.length - 1;
-        let startIndexCol = this.leftX - 1;
-        let endIndexCol = startIndexCol + this.matrix[0].length - 1;
-
-        if (this.lastPosition != null) {
-            this.clearPreviousPosition();
-        }
-
-        for (let i = startIndexRow; i <= endIndexRow; i++) {
-            for (let j = startIndexCol; j <= endIndexCol; j++) {
-                gameBoard[i][j] = [this.matrix[i - startIndexRow][j - startIndexCol], this.color];
-            }   
-        }
+    setLastPostion() {
         this.lastPosition = {
             leftX: this.leftX,
             topY: this.topY,
             matrix: this.matrix
         }
-        updateGameBoard();
+    }
+
+    spawn() {
+        this.leftX = 5 - Math.ceil(this.width / 2)
+        this.setLastPostion();
+        this.updatePosition()
         displaySimpleGameBoard();
     }
 
+    updatePosition() {
+        this.clearPreviousPosition();
+        insertGameBlock(gameBoard, this)
+        updateGameBoard()
+        this.setLastPostion();
+    }
+
     moveRight() {
-        if (this.leftX + this.matrix[0].length <= 10) {
+        if (this.leftX + this.width - 1 < 9) {
             this.leftX ++;
             this.updatePosition();
         }
     }
 
     moveLeft() {
-        if (this.leftX > 1) {
+        if (this.leftX > 0) {
             this.leftX --;
             this.updatePosition();
         }
     }
 
     moveDown() {
-        // ? Pomyslec nad tym
-        // if (this.isBlockedFromBottom()) {
-        //     this.place();
-        // }
-        if (this.topY - this.matrix.length - 1 >= 0) {
-            this.topY --;
-            console.log("moving down");
-            this.updatePosition();
-        } else {
+        if (this.topY + this.height - 1 == 19) {
             this.place();
             return;
         }
+        if (this.isBlockedFromBottom()) {
+            this.place();
+            return;
+        }
+        
+        if (this.topY + this.height - 1 < 19) {
+            this.topY ++;
+            this.updatePosition();
+        }
+        displaySimpleGameBoard();
     }
 
-    // sprawdzic na zasadzie pokrywania się jedynek 
+    printCoordinates() {
+        console.log("topY: " + this.topY);
+        console.log("height: " + this.height);
+        console.log("leftX: " + this.leftX);
+        console.log("width: " + this.width);
+
+        // => next bottom = topY + height
+        // => next left = leftX - 1
+        // => next right = leftX + width
+    }
+
 
     isBlockedFromBottom() {
-        const bottomGameboardPosition = (20 - this.topY) + this.matrix.length + 1;
-        if (bottomGameboardPosition >= 20) {
-            return true;
-        }
-        const xStart = this.leftX - 1;
-        const xEnd = xStart + this.matrix[0].length - 1;
-        console.log(bottomGameboardPosition);
-        for (let i = xStart; i <= xEnd; i++) {
-            if (gameBoard[bottomGameboardPosition][i][0] == 1 && this.matrix[this.matrix.length - 1][i - xStart] == 1) {
-                return true;
+        for (let i = 0; i < this.matrix.length; i ++) {
+            for (let j = 0; j < this.matrix[0].length; j ++) {
+                if (this.matrix[i][j] == 1 && gameBoard[this.topY + i + 1][this.leftX + j][0] == -1) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
     clearPreviousPosition() {
-        let startIndexRow = 20 - this.lastPosition.topY;
-        let endIndexRow = startIndexRow + this.matrix.length - 1;
-        let startIndexCol = this.lastPosition.leftX - 1;
-        let endIndexCol = startIndexCol + this.matrix[0].length - 1;
-        for (let i = startIndexRow; i <= endIndexRow; i++) {
-            for (let j = startIndexCol; j <= endIndexCol; j++) {
-                if (this.lastPosition.matrix[i-startIndexRow][j-startIndexCol] == 1) {
-                    gameBoard[i][j] = [0, null];
+        for (let i = 0; i < this.height; i ++) {
+            for (let j = 0; j < this.width; j ++) {
+                if (this.lastPosition.matrix[i][j] == 1) {
+                    gameBoard[this.lastPosition.topY + i][this.lastPosition.leftX + j] = [0, "white"];
                 }
-                
-            }   
+            }
         }
-        updateGameBoard();
     }
 
+
     place() {
+        this.updatePosition();
+        console.log(gameBoard);
         clearInterval(currentPieceInterval);
-        updateGameBoard();
+        applyStaticBlocks();
         generateGameBlock();
-        console.log("placing block");
     }
 }
 
@@ -207,7 +195,7 @@ function generateGameBoard() {
         for (var j = 0; j < cols; j ++) {
             const block = `<div class='gameBlock' id='row${i + 1}_col${j + 1}'></div>`
             gameBoardRef.innerHTML += block;
-            gameRow.push([0, null]);
+            gameRow.push([0, "white"]);
         }
         gameBoard.push(gameRow);
     }
@@ -216,16 +204,17 @@ function generateGameBoard() {
 
 function startGame() {
     generateGameBoard();
+    displaySimpleGameBoard();
     generateGameBlock();
 }
 
 function generateGameBlock() {
-    const randomPiece = pieces[Math.floor(Math.random() * pieces.length)];
-    currentPiece = new GamePiece(randomPiece);
+    currentPiece = new GamePiece(getRandomPiece());
     currentPiece.spawn();
-    currentPieceInterval = setInterval(() => {currentPiece.moveDown()}, 750);
+    currentPieceInterval = setInterval(() => {
+        currentPiece.moveDown()
+    }, 1000);
 }
-
 
 function updateGameBoard() {
     const gameBlocks = document.getElementsByClassName('gameBlock');
@@ -234,14 +223,32 @@ function updateGameBoard() {
         for (let j = 0; j < gameBoard[i].length; j++) {
             if (gameBoard[i][j][0] == 1) {
                 gameBlocks[blockNum].style.backgroundColor = gameBoard[i][j][1];
-            } else {
+            } else if (gameBoard[i][j][0] == 0){
                 gameBlocks[blockNum].style.backgroundColor = "white";
             }
+            // jeśli coś jest położone - nie ruszaj tego.
             blockNum++;
         }
     }
 }
 
-function checkIfMatricesOverlap(mainMatrix, subMatrix, leftX, topY) {
-    // check if you substitute subMatrix into mainMatrix, with positioning leftX, topY, are there are gonna be any overlapping ones.
+function insertGameBlock(board, block) {
+    for (let i = 0; i < block.height; i ++) {
+        for (let j = 0; j < block.width; j ++) {
+            if (board[block.topY + i][block.leftX + j][0] == 0) {
+                board[block.topY + i][block.leftX + j] = [block.matrix[i][j], block.color]
+            }
+            
+        }
+    }
+}
+
+function applyStaticBlocks() {
+    for (let i = 0; i < gameBoard.length; i ++) {
+        for (let j = 0; j < gameBoard[i].length; j ++) {
+            if (gameBoard[i][j][0] == 1) {
+                gameBoard[i][j][0] = -1;
+            }
+        }
+    }
 }
